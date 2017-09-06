@@ -38,7 +38,13 @@ defmodule Exwebrtc.STUN do
   def parse(packet, hmac_key_callback) do
     try do
       results = %{}
-      << request_type_id :: size(16), attributes_size :: size(16), transaction_id :: binary-size(16), attributes :: binary >> = packet
+      << 
+      request_type_id :: size(16),
+      attributes_size :: size(16),
+      _cookie :: binary-size(4),
+      transaction_id :: binary-size(12),
+      attributes :: binary >> = packet
+
       results = Dict.put(results, :attributes_size, attributes_size)
       results = Dict.put(results, :request_type, @request_type_id_to_name[request_type_id])
       results = Dict.put(results, :transaction_id, transaction_id)
@@ -63,7 +69,7 @@ defmodule Exwebrtc.STUN do
     transaction_id = if Dict.has_key?(attribs, :transaction_id) do
       attribs[:transaction_id]
     else
-      [@magic_cookie, :crypto.rand_bytes(12)]
+      [@magic_cookie, :crypto.strong_rand_bytes(12)]
     end
     header = [<< @request_type_name_to_id[:request] :: size(16)>>, << 0 :: size(16) >>, transaction_id]
 
@@ -144,7 +150,7 @@ defmodule Exwebrtc.STUN do
   end
 
   def padding_size(attribute_size) do
-    (4 * Float.ceil(attribute_size / 4)) - attribute_size
+    (4 * Float.ceil(attribute_size / 4)) - attribute_size |> round
   end
 
   def padding(attribute_size) do
