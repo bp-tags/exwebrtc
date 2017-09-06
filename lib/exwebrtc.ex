@@ -1,10 +1,9 @@
 defmodule Exwebrtc do
-  use Application.Behaviour
-
   def start(_type, [:test]) do
     # don't run the app in test mode
     {:ok, self}
   end
+
   def start(_type, _args) do
     dispatch = [
       {:_, [

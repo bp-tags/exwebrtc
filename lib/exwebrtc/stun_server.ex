@@ -1,9 +1,10 @@
 defmodule Exwebrtc.STUNServer do
   use ExActor.Strict, export: :stun_server
+
   alias Exwebrtc.STUN, as: STUN
   alias Exwebrtc.SDP, as: SDP
 
-  definit port_number do
+  defstart start_link(port_number) do
     {:ok, socket} = :gen_udp.open(port_number, [:binary, {:active, :true}])
     initial_state(%{socket: socket})
   end
@@ -32,12 +33,12 @@ defmodule Exwebrtc.STUNServer do
     username |> String.split(":") |> Enum.reverse() |> Enum.join(":")
   end
 
-  definfo {:udp, socket, ip_addr, in_port_no, packet}, state: state do
+  defhandleinfo {:udp, socket, ip_addr, in_port_no, packet}, state: state do
     {:ok, attributes} = STUN.parse(packet, fn x -> "9b4424d9e8c5e253c0290d63328b55b3" end)
     if attributes[:request_type] == :request do      
       {:ok, reply} = STUN.build_reply(
         transaction_id: attributes[:transaction_id], 
-        mapped_address: {Enum.join(tuple_to_list(ip_addr), "."), in_port_no},
+        mapped_address: {Enum.join(:erlang.tuple_to_list(ip_addr), "."), in_port_no},
         message_integrity_key: "9b4424d9e8c5e253c0290d63328b55b3",
       )
       :gen_udp.send(socket, ip_addr, in_port_no, reply)

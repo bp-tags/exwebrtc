@@ -1,5 +1,6 @@
 defmodule Exwebrtc.STUN do
   use Bitwise
+  import IO
 
   @magic_cookie << 33, 18, 164, 66 >>
   @fingerprint_mask 0x5354554e
@@ -37,11 +38,11 @@ defmodule Exwebrtc.STUN do
   def parse(packet, hmac_key_callback) do
     try do
       results = %{}
-      << request_type_id :: size(16), attributes_size :: size(16), transaction_id :: [binary, size(16)], attributes :: binary >> = packet
+      << request_type_id :: size(16), attributes_size :: size(16), transaction_id :: binary-size(16), attributes :: binary >> = packet
       results = Dict.put(results, :attributes_size, attributes_size)
       results = Dict.put(results, :request_type, @request_type_id_to_name[request_type_id])
       results = Dict.put(results, :transaction_id, transaction_id)
-      if attributes_size != iodata_size(attributes) do
+      if attributes_size != iodata_length(attributes) do
         raise "attributes size is incorrect, garbled packet?"
       end
       results = parse_attributes(results, binary_part(attributes, 0, attributes_size))
@@ -81,13 +82,13 @@ defmodule Exwebrtc.STUN do
   end
 
   def add_fingerprint(header, attributes) do
-    header = List.replace_at(header, 1, << iodata_size(attributes) + 8 :: size(16) >>)
+    header = List.replace_at(header, 1, << iodata_length(attributes) + 8 :: size(16) >>)
     attributes = attributes ++ [encode_attribute(:fingerprint, [header, attributes])]
     [header, attributes]
   end
 
   def add_message_integrity(key, header, attributes) do
-    header = List.replace_at(header, 1, << iodata_size(attributes) + 24 :: size(16) >>)
+    header = List.replace_at(header, 1, << iodata_length(attributes) + 24 :: size(16) >>)
     packet_mac = :crypto.hmac(:sha, key, iodata_to_binary([header, attributes]))
     attributes = attributes ++ [encode_attribute(:message_integrity, packet_mac)]
     [header, attributes]
@@ -109,8 +110,8 @@ defmodule Exwebrtc.STUN do
   end
 
   def string_xor(s1, s2) do
-    s1 = bitstring_to_list(s1)
-    s2 = bitstring_to_list(s2)
+    s1 = :erlang.bitstring_to_list(s1)
+    s2 = :erlang.bitstring_to_list(s2)
     Enum.zip(s1, s2) |> Enum.map(fn {a, b} -> a^^^b end) |> iodata_to_binary
   end
 
@@ -154,13 +155,13 @@ defmodule Exwebrtc.STUN do
     [<< @attributes_name_to_id[attr_type] :: size(16) >>, << 0 :: size(16) >>]
   end
   def encode_attribute_header(attr_type, value) do
-    attribute_size = iodata_size(value)
+    attribute_size = iodata_length(value)
     [<< @attributes_name_to_id[attr_type] :: size(16) >>, << attribute_size :: size(16) >>, value, padding(attribute_size)]
   end
   
   def parse_attributes(results, << attribute_id :: size(16), attribute_size :: size(16), rest :: binary >>) do
     ps = padding_size(attribute_size)
-    << value :: [binary, size(attribute_size)], _padding :: [binary, size(ps)], next_attribute :: binary >> = rest
+    << value :: binary-size(attribute_size), _padding :: binary-size(ps), next_attribute :: binary >> = rest
     value = parse_attribute_value(@attributes_id_to_name[attribute_id], value)
     if value do
       key = if @attributes_id_to_name[attribute_id] == :xor_mapped_address do
@@ -180,7 +181,7 @@ defmodule Exwebrtc.STUN do
   def parse_attribute_value(:ice_controlling, << value :: size(64) >>), do: value
 
   def parse_attribute_value(:xor_mapped_address, value) do
-    <<family :: size(16), port :: [binary, size(2)], ip_addr :: [binary, size(4)] >> = value
+    <<family :: size(16), port :: binary-size(2), ip_addr :: binary-size(4) >> = value
     if family != 1 do
       raise "IPv6 not supported"
     end
@@ -193,7 +194,7 @@ defmodule Exwebrtc.STUN do
   def parse_attribute_value(_name, value), do: value
 
   def verify_fingerprint(packet, << fingerprint :: size(32) >>) do
-    packet_crc32 = :erlang.crc32(binary_part(packet, 0, iodata_size(packet) - 8)) ^^^ @fingerprint_mask
+    packet_crc32 = :erlang.crc32(binary_part(packet, 0, iodata_length(packet) - 8)) ^^^ @fingerprint_mask
     if packet_crc32 != fingerprint do
       raise "bad fingerprint"
     end
@@ -202,7 +203,7 @@ defmodule Exwebrtc.STUN do
   def verify_message_integrity(packet, results, hmac_key_callback) do
     # change the length in header
     adjusted_attribs_size = results[:attributes_size] - 8
-    packet_for_hmac_check = binary_part(packet, 0, 2) <> << adjusted_attribs_size :: size(16) >> <> binary_part(packet, 4, iodata_size(packet) - 4 - 8 - 24)
+    packet_for_hmac_check = binary_part(packet, 0, 2) <> << adjusted_attribs_size :: size(16) >> <> binary_part(packet, 4, iodata_length(packet) - 4 - 8 - 24)
 
     # compute mac
     hmac_key = hmac_key_callback.(results)

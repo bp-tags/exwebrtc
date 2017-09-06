@@ -4,7 +4,7 @@ defmodule Exwebrtc.Mixfile do
   def project do
     [app: :exwebrtc,
      version: "0.0.1",
-     elixir: "~> 0.13.1",
+     elixir: "1.5.0",
      deps: deps]
   end
 
@@ -23,9 +23,9 @@ defmodule Exwebrtc.Mixfile do
 
   defp deps do
     [
-      { :cowboy, github: "extend/cowboy" },
-      { :exactor, "~> 0.3.2" },
-      { :hound, github: "HashNuke/hound" }
+      { :cowboy, "1.1.2" },
+      { :exactor, "2.2.3" },
+      { :hound, "1.0.4" }
     ]
   end
 end
