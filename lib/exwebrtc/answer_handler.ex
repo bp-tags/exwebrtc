@@ -5,7 +5,7 @@ defmodule Exwebrtc.AnswerHandler do
 
   def handle(req, state) do
     {:ok, body, req} = :cowboy_req.body(req)
-    {:ok, decoded} = JSEX.decode(body)
+    {:ok, decoded} = Poison.decode(body)
     sdp = Dict.get(decoded, "sdp")
     IO.puts inspect(sdp)
     Exwebrtc.STUNServer.answer_sdp(sdp)

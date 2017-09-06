@@ -23,16 +23,18 @@ var serverSDP = [
   "o=Mozilla-SIPUA-28.0 17836 0 IN IP4 71.63.48.107",
   "s=SIP Call",
   "t=0 0",
+  "m=application 4489 UDP/DTLS/SCTP webrtc-datachannel",
+  "c=IN IP4 192.168.1.69",
+  "a=mid:data",
   "a=ice-ufrag:3081b21e",
   "a=ice-pwd:9b4424d9e8c5e253c0290d63328b55b3",
   "a=fingerprint:sha-256 53:CE:F0:CC:D5:09:EE:CD:A4:AE:31:22:09:EE:27:FE:2B:7D:E7:D4:F1:F6:3B:A5:1F:DB:69:30:19:49:57:1B",
-  "m=application 4489 DTLS/SCTP 5000",
-  "c=IN IP4 192.168.42.112",
+  "a=sendrecv",
   "a=sctpmap:5000 webrtc-datachannel 16",
   "a=setup:actpass",
-  "a=candidate:0 1 UDP 2130379007 192.168.42.112 4488 typ host",
-  "a=candidate:0 2 UDP 2130379006 192.168.42.112 4489 typ host"
-].join('\r\n');
+  "a=candidate:0 1 udp 2130379007 192.168.1.69 4488 typ host generation 0",
+  "a=candidate:0 2 udp 2130379006 192.168.1.69 4489 typ host generation 0",
+].join('\n') + "\n";
 var serverOffer = {"type": "offer", "sdp": serverSDP};
 
 function createConnection() {

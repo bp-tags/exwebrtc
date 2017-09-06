@@ -25,7 +25,8 @@ defmodule Exwebrtc.Mixfile do
     [
       { :cowboy, "1.1.2" },
       { :exactor, "2.2.3" },
-      { :hound, "1.0.4" }
+      { :hound, "1.0.4" },
+      { :poison, "~> 3.1" },
     ]
   end
 end
