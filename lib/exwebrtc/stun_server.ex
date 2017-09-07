@@ -25,7 +25,7 @@ defmodule Exwebrtc.STUNServer do
       use_candidate: nil,
       message_integrity_key: SDP.password(sdp)
     )
-    IO.puts inspect(request)
+    IO.puts "Send probe response: #{inspect(request)}"
     :gen_udp.send(socket, ip_addr, in_port_no, request)
   end
 
@@ -51,8 +51,8 @@ defmodule Exwebrtc.STUNServer do
         probe(state)
       end
     else
-      IO.puts inspect(attributes)
-      raise "got a response"
+      #IO.puts inspect(attributes)
+      IO.puts "got a request type #{attributes[:request_type]}"
     end
 
     new_state(state)

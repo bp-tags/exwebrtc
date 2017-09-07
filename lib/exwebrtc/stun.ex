@@ -41,13 +41,13 @@ defmodule Exwebrtc.STUN do
       << 
       request_type_id :: size(16),
       attributes_size :: size(16),
-      _cookie :: binary-size(4),
-      transaction_id :: binary-size(12),
+      transaction_id :: binary-size(16),
       attributes :: binary >> = packet
 
       results = Dict.put(results, :attributes_size, attributes_size)
       results = Dict.put(results, :request_type, @request_type_id_to_name[request_type_id])
       results = Dict.put(results, :transaction_id, transaction_id)
+
       if attributes_size != iodata_length(attributes) do
         raise "attributes size is incorrect, garbled packet?"
       end
@@ -57,7 +57,8 @@ defmodule Exwebrtc.STUN do
         verify_fingerprint(packet, results[:fingerprint])
       end
       if Dict.has_key?(results, :message_integrity) do
-        verify_message_integrity(packet, results, hmac_key_callback)
+        # TODO
+        #verify_message_integrity(packet, results, hmac_key_callback)
       end
       {:ok, results}
     rescue
@@ -167,6 +168,7 @@ defmodule Exwebrtc.STUN do
   
   def parse_attributes(results, << attribute_id :: size(16), attribute_size :: size(16), rest :: binary >>) do
     ps = padding_size(attribute_size)
+
     << value :: binary-size(attribute_size), _padding :: binary-size(ps), next_attribute :: binary >> = rest
     value = parse_attribute_value(@attributes_id_to_name[attribute_id], value)
     if value do
