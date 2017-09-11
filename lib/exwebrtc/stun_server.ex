@@ -39,7 +39,7 @@ defmodule Exwebrtc.STUNServer do
     new_state(state)
   end
 
-  defcast active_once({ client, pid }), state: state do
+  defcast active_once(client, pid), state: state do
     IO.puts "Active once"
     new_state(state)
   end
@@ -61,14 +61,13 @@ defmodule Exwebrtc.STUNServer do
   end
 
   defhandleinfo {:udp, socket, ip_addr, in_port_no, packet} = msg, state: %{ conn_pid: conn_pid } = state do
-    IO.puts "DTLS packet ready, started"
+    IO.puts "DTLS packet ready, send #{inspect(msg)} to #{inspect(conn_pid)}"
     send(conn_pid, msg)
     new_state(state)
   end
 
   defhandleinfo {:udp, socket, ip_addr, in_port_no, packet} = msg, state: %{ dtls_ready: true } = state do
-    IO.puts "DTLS packet ready, not started"
-
+    IO.puts "DTLS packet ready, not started" 
     client = { ip_addr, in_port_no }
     socket = state[:socket]
     listener_pid = self()
@@ -85,12 +84,17 @@ defmodule Exwebrtc.STUNServer do
 
     emulated_options = :dtls_socket.emulated_options()
 
+    cb_info = :dtls_socket.default_cb_info()
+
     conn_args = [:server, "localhost", state[:port], { listener_pid, { client, socket } },
-                 {dtls_options, emulated_options, :udp_listener}, user_pid, :dtls_socket.default_cb_info()]
+                 {dtls_options, emulated_options, :udp_listener}, user_pid, cb_info]
 
     { :ok, conn_pid } = :dtls_connection_sup.start_child(conn_args)
     state = Dict.put(state, :conn_pid, conn_pid)
+
     send(conn_pid, msg)
+
+    Task.async(fn -> :gen_statem.call(conn_pid, { :start, 100000 }) end)
 
     new_state(state)
   end
